@@ -9,8 +9,7 @@
 		<meta property="og:type" content="website" />
 		<meta property="og:title" content="ICE Client" />
 		<meta property="og:description" content="ICE Client" />
-		<link type="image/png" rel="shortcut icon" href="favicon.png" />
-		<script type="text/javascript" src="classes.js" defer></script>
+		<link id="ice_favicon" type="image/png" rel="shortcut icon" href="favicon.png?v=89064f69f28a85086cf85a07ec2ee9cafe428d2a504e37346ce9944d53ed42cf" />
 		<script type="text/javascript">
 			"use strict";
 			window.addEventListener("load", function() {
@@ -19,31 +18,62 @@
 					return;
 				}
 
-				window.eaglercraftXOpts = {
-					demoMode: false,
-					container: "game_frame",
-					assetsURI: "assets.epk",
-					localesURI: "lang/",
-					worldsDB: "worlds",
-					servers: []
-				};
+				// Fetch the small manifest afresh, independently of a cached HTML launcher.
+				// Keep all runtime URLs on one build ID; large files remain cacheable.
+				var exportedBuildId = "89064f69f28a85086cf85a07ec2ee9cafe428d2a504e37346ce9944d53ed42cf";
+				function launch(buildId) {
+					window.eaglercraftXOpts = {
+						demoMode: false,
+						container: "game_frame",
+						assetsURI: "assets.epk?v=" + buildId,
+						localesURI: "lang/",
+						worldsDB: "worlds",
+						servers: []
+					};
 
-				var query = window.location.search;
-				if((typeof query === "string") && query[0] === "?" && (typeof window.URLSearchParams !== "undefined")) {
-					query = new window.URLSearchParams(query);
-					var server = query.get("server");
-					if(server) {
-						window.eaglercraftXOpts.joinServer = server;
+					var query = window.location.search;
+					if((typeof query === "string") && query[0] === "?" && (typeof window.URLSearchParams !== "undefined")) {
+						query = new window.URLSearchParams(query);
+						var server = query.get("server");
+						if(server) {
+							window.eaglercraftXOpts.joinServer = server;
+						}
 					}
+
+					var splash = document.getElementById("ice_bootstrap_art");
+					if(splash) splash.src = "splash.png?v=" + buildId;
+					document.getElementById("ice_favicon").href = "favicon.png?v=" + buildId;
+					var runtime = document.createElement("script");
+					runtime.src = "classes.js?v=" + buildId;
+					runtime.onload = function() { main(); };
+					runtime.onerror = function() {
+						alert("ICE Client could not load. Please reload the page to try again.");
+					};
+					document.head.appendChild(runtime);
 				}
 
-				main();
+				if(typeof window.fetch !== "function") {
+					launch(exportedBuildId);
+					return;
+				}
+				fetch("ice-build.json", { cache: "no-store" }).then(function(response) {
+					if(!response.ok) throw new Error("Build manifest unavailable");
+					return response.json();
+				}).then(function(manifest) {
+					if(!manifest || !/^[a-f0-9]{64}$/.test(manifest.buildId)) {
+						throw new Error("Invalid build manifest");
+					}
+					return manifest.buildId;
+				}).catch(function() {
+					// Allow the exported build to start if the manifest is temporarily unavailable.
+					return exportedBuildId;
+				}).then(launch);
 			});
 		</script>
 	</head>
 	<body style="margin:0px;width:100%;height:100%;overflow:hidden;background-color:black;" id="game_frame">
 		<div id="ice_bootstrap_splash" style="position:absolute;inset:0;background:black;overflow:hidden;pointer-events:none;">
-			<img id="ice_bootstrap_art" src="splash.png" alt="" style="position:absolute;display:block;" />
+			<img id="ice_bootstrap_art" src="splash.png?v=89064f69f28a85086cf85a07ec2ee9cafe428d2a504e37346ce9944d53ed42cf" alt="" style="position:absolute;display:block;" />
 			<div id="ice_bootstrap_bar" style="position:absolute;box-sizing:border-box;border-style:solid;border-color:white;background:black;">
 				<div style="width:10%;height:100%;background:#3FAAE9;"></div>
 			</div>
